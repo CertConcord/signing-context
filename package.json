@@ -1,0 +1,13 @@
+{
+  "name": "@certconcord/signing-context",
+  "version": "0.1.0-draft.1",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24.15.0 <27"
+  },
+  "scripts": {
+    "check": "node tools/check.mjs"
+  }
+}
