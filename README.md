@@ -2,9 +2,9 @@
 
 Focused interface requirements for binding an authorized key and exact signing input, declaring enforcement capabilities, and reconciling a lost result in experimental signing APIs.
 
-**Draft 01. No stable release or upstream adoption is claimed.**
+**Draft 02. No stable release or upstream adoption is claimed.**
 
-[Draft](draft.md) defines the technical scope and limits. [Sources](sources.json) pins the upstream documents. [Cases](cases.json) identifies the positive and negative evaluation cases.
+[Draft](draft.md) defines the technical scope and limits. [Sources](sources.json) pins the upstream documents. [Cases](cases.json) contains replayable positive and negative synthetic vectors.
 
 This repository can be reviewed and used independently of the CertConcord framework. It does not require the framework's authority hierarchy, operation objects or deployment. The framework selects this work through a pinned dependency and adds its own integration policy.
 

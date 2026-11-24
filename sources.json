@@ -1,5 +1,5 @@
 {
-  "reviewDate": "2026-10-05",
+  "reviewDate": "2026-11-24",
   "sources": [
     {
       "id": "rawSigningV5",
@@ -18,6 +18,12 @@
       "url": "https://raw.githubusercontent.com/WebKit/explainers/6ce73fa4f91bbe7fb1990b6c1e7276c8dbd12609/remote-cryptokeys/README.md",
       "sha256": "f2468ad1eab92dc7d1824beae50d4733e02a47779a352e2a7d3985a9774c9074",
       "bytes": 10384
+    },
+    {
+      "id": "cscApi2200",
+      "url": "https://cloudsignatureconsortium.org/wp-content/uploads/2025/11/csc-api.pdf",
+      "sha256": "339cb9905a9ae3779e4a99ff2dc57a3f5243528dfb3578ee5c91745929fa76c1",
+      "bytes": 4143407
     }
   ]
 }
