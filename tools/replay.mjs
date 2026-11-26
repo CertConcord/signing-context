@@ -33,6 +33,7 @@ function validClientId(value) {
 function runCase(corpus, vector) {
   const request = copy(corpus.baseRequest);
   const authorization = copy(corpus.baseAuthorization);
+  const resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
   let durable = {record: null, grantUse: {}, revoked: false};
   let now = 1;
@@ -53,9 +54,11 @@ function runCase(corpus, vector) {
     }
     if (durable.grantUse[candidate.authorizationRef]) return 'grant-spent';
     if (durable.revoked || now > authorization.expiresAt) return 'unauthorized';
-    if (!sameBoundFields(candidate, authorization)) return 'unauthorized';
+    if (!sameBoundFields(candidate, authorization) ||
+        !isDeepStrictEqual(resolvedSelection, corpus.baseAuthorizationSelection)) return 'unauthorized';
     durable.grantUse[candidate.authorizationRef] = candidate.clientData;
-    durable.record = {request: copy(candidate), status: 'reserved', result: null};
+    durable.record = {request: copy(candidate), selection: copy(resolvedSelection),
+      status: 'reserved', result: null};
     return 'reserved';
   }
 
@@ -67,12 +70,12 @@ function runCase(corpus, vector) {
         if (!record || record.status !== 'reserved') return 'invalid-transition';
         if (durable.revoked) return (record.status = 'authorization-revoked');
         if (now > authorization.expiresAt) return (record.status = 'authorization-expired');
-        if (step.effectiveRequestPatch) {
-          const effective = {...record.request, ...copy(step.effectiveRequestPatch)};
+        {
+          const effective = {...record.request, ...copy(step.effectiveRequestPatch ?? {})};
+          const selected = {...record.selection, ...copy(step.effectiveSelectionPatch ?? {})};
           if (effective.clientData !== record.request.clientData ||
-              !sameBoundFields(effective, record.request)) {
-            return (record.status = 'boundary-mismatch');
-          }
+              !sameBoundFields(effective, record.request) ||
+              !isDeepStrictEqual(selected, record.selection)) return (record.status = 'boundary-mismatch');
         }
         record.status = 'unresolved';
         invocations++;
@@ -88,6 +91,8 @@ function runCase(corpus, vector) {
           if (claimed.clientData !== record.request.clientData ||
               !sameBoundFields(claimed, record.request)) return 'outcome-mismatch';
         }
+        if (step.resultSelectionPatch && !isDeepStrictEqual(
+          {...record.selection, ...copy(step.resultSelectionPatch)}, record.selection)) return 'outcome-mismatch';
         record.result = step.result;
         record.status = 'completed';
         return 'completed';

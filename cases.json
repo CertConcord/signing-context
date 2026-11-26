@@ -29,6 +29,14 @@
     "policyEpoch": 7,
     "expiresAt": 50
   },
+  "baseSelection": {
+    "providerIdentity": "provider-instance-01",
+    "keyIdentity": "key-version-01"
+  },
+  "baseAuthorizationSelection": {
+    "providerIdentity": "provider-instance-01",
+    "keyIdentity": "key-version-01"
+  },
   "baseCapability": {
     "profile": "sc1",
     "evidence": "authenticated-service-policy",
@@ -98,6 +106,29 @@
         {"action": "submit", "expect": "reserved"},
         {"action": "dispatch", "effectiveRequestPatch": {"credentialID": "credential-02"}, "expect": "boundary-mismatch"},
         {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-credential-selects-other-key-before-admission",
+      "selectionPatch": {"keyIdentity": "key-version-02"},
+      "steps": [{"action": "submit", "expect": "unauthorized"}],
+      "invocations": 0
+    },
+    {
+      "id": "same-credential-remapped-to-other-key-at-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-service-routes-to-other-provider-at-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveSelectionPatch": {"providerIdentity": "provider-instance-02"}, "expect": "boundary-mismatch"}
       ],
       "invocations": 0
     },
@@ -236,6 +267,16 @@
         {"action": "submit", "expect": "reserved"},
         {"action": "dispatch", "expect": "unresolved"},
         {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultBindingPatch": {"credentialID": "credential-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-remapped-key-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "outcome-mismatch"},
         {"action": "lookup", "expect": "unresolved"}
       ],
       "invocations": 1
