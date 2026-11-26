@@ -33,7 +33,7 @@ function validClientId(value) {
 function runCase(corpus, vector) {
   const request = copy(corpus.baseRequest);
   const authorization = copy(corpus.baseAuthorization);
-  const resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
+  let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
   let durable = {record: null, grantUse: {}, revoked: false};
   let now = 1;
@@ -72,7 +72,7 @@ function runCase(corpus, vector) {
         if (now > authorization.expiresAt) return (record.status = 'authorization-expired');
         {
           const effective = {...record.request, ...copy(step.effectiveRequestPatch ?? {})};
-          const selected = {...record.selection, ...copy(step.effectiveSelectionPatch ?? {})};
+          const selected = {...resolvedSelection, ...copy(step.effectiveSelectionPatch ?? {})};
           if (effective.clientData !== record.request.clientData ||
               !sameBoundFields(effective, record.request) ||
               !isDeepStrictEqual(selected, record.selection)) return (record.status = 'boundary-mismatch');
@@ -101,6 +101,9 @@ function runCase(corpus, vector) {
         if ((step.audience ?? request.audience) !== record.request.audience) return 'access-denied';
         if ((step.clientData ?? request.clientData) !== record.request.clientData) return 'unknown';
         return statusOf(record);
+      case 'remap':
+        resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
+        return 'selection-changed';
       case 'cancel': return record ? statusOf(record) : 'unknown';
       case 'restart':
         durable = copy(durable);

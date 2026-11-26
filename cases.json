@@ -200,6 +200,20 @@
       "invocations": 1
     },
     {
+      "id": "lost-response-retry-after-key-alias-remap",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "restart", "expect": "unresolved"},
+        {"action": "remap", "selectionPatch": {"keyIdentity": "key-version-02"}, "expect": "selection-changed"},
+        {"action": "submit", "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
       "id": "authorized-result-retrievable-after-grant-expiry",
       "steps": [
         {"action": "submit", "expect": "reserved"},
