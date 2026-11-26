@@ -66,6 +66,28 @@
       "invocations": 1
     },
     {
+      "id": "completed-outcome-expires-but-id-and-grant-stay-spent",
+      "authorizationPatch": {"expiresAt": 120000},
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "advance", "now": 60001, "expect": "time-advanced"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed:synthetic-signature-01"},
+        {"action": "restart", "expect": "completed:synthetic-signature-01"},
+        {"action": "advance", "now": 60002, "expect": "time-advanced"},
+        {"action": "lookup", "expect": "unknown"},
+        {"action": "submit", "expect": "unknown"},
+        {"action": "submit", "requestPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "collision"},
+        {"action": "submit", "requestPatch": {"clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "grant-spent"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "invalid-transition"},
+        {"action": "restart", "expect": "unknown"},
+        {"action": "dispatch", "expect": "invalid-transition"}
+      ],
+      "invocations": 1
+    },
+    {
       "id": "same-id-changed-digest",
       "steps": [
         {"action": "submit", "expect": "reserved"},
