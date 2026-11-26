@@ -310,6 +310,18 @@
       "invocations": 1
     },
     {
+      "id": "foreign-caller-cannot-probe-cancellation-status",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "cancel", "callerPatch": {"audience": "other.example"}, "expect": "unknown"},
+        {"action": "cancel", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": "unknown"},
+        {"action": "cancel", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "cancel", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
       "id": "unsigned-result-is-not-protected-evidence",
       "steps": [
         {"action": "submit", "expect": "reserved"},
@@ -356,6 +368,28 @@
         {"action": "dispatch", "expect": "unresolved"},
         {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
         {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "expect": "immutable-result"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "unauthenticated-repeat-completion-cannot-read-outcome",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": false, "expect": "unauthenticated-result"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "repeat-completion-for-other-key-cannot-read-outcome",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "resultSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
       ],
       "invocations": 1
     },

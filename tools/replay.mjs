@@ -95,9 +95,7 @@ function runCase(corpus, vector) {
         return 'unresolved';
       case 'complete':
         if (!record) return 'invalid-transition';
-        if (record.status === 'completed') return record.result === step.result
-          ? statusOf(record) : 'immutable-result';
-        if (record.status !== 'unresolved') return 'invalid-transition';
+        if (record.status !== 'unresolved' && record.status !== 'completed') return 'invalid-transition';
         if (step.authenticated !== true) return 'unauthenticated-result';
         if (step.resultBindingPatch) {
           const claimed = {...record.request, ...copy(step.resultBindingPatch)};
@@ -106,6 +104,8 @@ function runCase(corpus, vector) {
         }
         if (step.resultSelectionPatch && !isDeepStrictEqual(
           {...record.selection, ...copy(step.resultSelectionPatch)}, record.selection)) return 'outcome-mismatch';
+        if (record.status === 'completed') return record.result === step.result
+          ? statusOf(record) : 'immutable-result';
         record.result = step.result;
         record.status = 'completed';
         return 'completed';
@@ -120,7 +120,12 @@ function runCase(corpus, vector) {
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
-      case 'cancel': return record ? statusOf(record) : 'unknown';
+      case 'cancel': {
+        const caller = callerFor(step);
+        if (caller.authenticated !== true) return 'access-denied';
+        if (!record || !sameScope(caller, record.caller)) return 'unknown';
+        return statusOf(record);
+      }
       case 'restart':
         durable = copy(durable);
         return durable.record ? statusOf(durable.record) : 'unknown';
