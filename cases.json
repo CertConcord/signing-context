@@ -37,6 +37,11 @@
     "providerIdentity": "provider-instance-01",
     "keyIdentity": "key-version-01"
   },
+  "baseAuthenticatedCaller": {
+    "authenticated": true,
+    "service": "https://sign.example/csc/v2",
+    "audience": "client.example"
+  },
   "baseCapability": {
     "profile": "sc1",
     "evidence": "authenticated-service-policy",
@@ -174,7 +179,46 @@
       "id": "other-client-cannot-query",
       "steps": [
         {"action": "submit", "expect": "reserved"},
-        {"action": "lookup", "audience": "other.example", "expect": "access-denied"}
+        {"action": "lookup", "callerPatch": {"audience": "other.example"}, "expect": "unknown"},
+        {"action": "lookup", "callerPatch": {"audience": "other.example"}, "clientData": "sc1:EBESExQVFhcYGRobHB0eHw", "expect": "unknown"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-client-same-id-submit-does-not-reveal-collision",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "requestPatch": {"audience": "other.example"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "requestPatch": {"audience": "other.example", "clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "unauthorized"},
+        {"action": "lookup", "expect": "reserved"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-service-same-id-submit-does-not-reveal-collision",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"service": "https://other.example/csc/v2"}, "requestPatch": {"service": "https://other.example/csc/v2"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"service": "https://other.example/csc/v2"}, "requestPatch": {"service": "https://other.example/csc/v2", "clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "unauthorized"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-service-same-id-cannot-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "lookup", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": "unknown"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "unauthenticated-caller-cannot-submit-or-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "lookup", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "lookup", "expect": "reserved"}
       ],
       "invocations": 0
     },

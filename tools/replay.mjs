@@ -9,6 +9,8 @@ const boundFields = [
 ];
 
 const copy = value => structuredClone(value);
+const sameScope = (left, right) => left.service === right.service &&
+  left.audience === right.audience;
 const statusOf = record => record.status === 'completed'
   ? `completed:${record.result}` : record.status;
 const validDigest = value => typeof value === 'string' &&
@@ -33,13 +35,19 @@ function validClientId(value) {
 function runCase(corpus, vector) {
   const request = copy(corpus.baseRequest);
   const authorization = copy(corpus.baseAuthorization);
+  const baseCaller = copy(corpus.baseAuthenticatedCaller);
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
-  let durable = {record: null, grantUse: {}, revoked: false};
+  let durable = {record: null, grantUse: [], revoked: false};
   let now = 1;
   let invocations = 0;
 
-  function submit(candidate) {
+  function callerFor(step) {
+    return {...baseCaller, ...copy(step.callerPatch ?? {})};
+  }
+
+  function submit(candidate, caller) {
+    if (caller.authenticated !== true) return 'access-denied';
     if (capability.profile !== 'sc1' ||
         capability.evidence !== 'authenticated-service-policy' ||
         capability.boundary !== 'service' ||
@@ -48,16 +56,21 @@ function runCase(corpus, vector) {
     if (candidate.inputKind !== 'digest' || candidate.operationMode !== 'A' ||
         !Array.isArray(candidate.hashes) || candidate.hashes.length !== 1 ||
         !validDigest(candidate.hashes[0]) || !validClientId(candidate.clientData)) return 'unsupported';
+    if (!sameScope(candidate, caller)) return 'unauthorized';
     const prior = durable.record;
-    if (prior && prior.request.clientData === candidate.clientData) {
+    if (prior && sameScope(prior.caller, caller) &&
+        prior.request.clientData === candidate.clientData) {
       return sameBoundFields(prior.request, candidate) ? statusOf(prior) : 'collision';
     }
-    if (durable.grantUse[candidate.authorizationRef]) return 'grant-spent';
     if (durable.revoked || now > authorization.expiresAt) return 'unauthorized';
     if (!sameBoundFields(candidate, authorization) ||
         !isDeepStrictEqual(resolvedSelection, corpus.baseAuthorizationSelection)) return 'unauthorized';
-    durable.grantUse[candidate.authorizationRef] = candidate.clientData;
-    durable.record = {request: copy(candidate), selection: copy(resolvedSelection),
+    if (durable.grantUse.some(use => sameScope(use.caller, caller) &&
+        use.authorizationRef === candidate.authorizationRef)) return 'grant-spent';
+    if (prior) return 'capacity-unavailable';
+    durable.grantUse.push({caller: copy(caller), authorizationRef: candidate.authorizationRef});
+    durable.record = {request: copy(candidate), caller: copy(caller),
+      selection: copy(resolvedSelection),
       status: 'reserved', result: null};
     return 'reserved';
   }
@@ -65,7 +78,7 @@ function runCase(corpus, vector) {
   function stepResult(step) {
     const record = durable.record;
     switch (step.action) {
-      case 'submit': return submit({...request, ...copy(step.requestPatch ?? {})});
+      case 'submit': return submit({...request, ...copy(step.requestPatch ?? {})}, callerFor(step));
       case 'dispatch':
         if (!record || record.status !== 'reserved') return 'invalid-transition';
         if (durable.revoked) return (record.status = 'authorization-revoked');
@@ -96,11 +109,14 @@ function runCase(corpus, vector) {
         record.result = step.result;
         record.status = 'completed';
         return 'completed';
-      case 'lookup':
+      case 'lookup': {
+        const caller = callerFor(step);
+        if (caller.authenticated !== true) return 'access-denied';
         if (!record) return 'unknown';
-        if ((step.audience ?? request.audience) !== record.request.audience) return 'access-denied';
+        if (!sameScope(caller, record.caller)) return 'unknown';
         if ((step.clientData ?? request.clientData) !== record.request.clientData) return 'unknown';
         return statusOf(record);
+      }
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
