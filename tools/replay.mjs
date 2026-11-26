@@ -67,6 +67,13 @@ function runCase(corpus, vector) {
         if (!record || record.status !== 'reserved') return 'invalid-transition';
         if (durable.revoked) return (record.status = 'authorization-revoked');
         if (now > authorization.expiresAt) return (record.status = 'authorization-expired');
+        if (step.effectiveRequestPatch) {
+          const effective = {...record.request, ...copy(step.effectiveRequestPatch)};
+          if (effective.clientData !== record.request.clientData ||
+              !sameBoundFields(effective, record.request)) {
+            return (record.status = 'boundary-mismatch');
+          }
+        }
         record.status = 'unresolved';
         invocations++;
         return 'unresolved';
@@ -76,6 +83,11 @@ function runCase(corpus, vector) {
           ? statusOf(record) : 'immutable-result';
         if (record.status !== 'unresolved') return 'invalid-transition';
         if (step.authenticated !== true) return 'unauthenticated-result';
+        if (step.resultBindingPatch) {
+          const claimed = {...record.request, ...copy(step.resultBindingPatch)};
+          if (claimed.clientData !== record.request.clientData ||
+              !sameBoundFields(claimed, record.request)) return 'outcome-mismatch';
+        }
         record.result = step.result;
         record.status = 'completed';
         return 'completed';

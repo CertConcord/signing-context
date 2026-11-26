@@ -93,6 +93,32 @@
       "invocations": 1
     },
     {
+      "id": "key-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"credentialID": "credential-02"}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "digest-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "provider-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"service": "https://other.example/csc/v2"}, "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
       "id": "different-key-with-same-grant",
       "steps": [
         {"action": "submit", "requestPatch": {"credentialID": "credential-02"}, "expect": "unauthorized"}
@@ -143,6 +169,18 @@
       "invocations": 1
     },
     {
+      "id": "authorized-result-retrievable-after-grant-expiry",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "advance", "now": 51, "expect": "time-advanced"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"},
+        {"action": "submit", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
       "id": "crash-before-dispatch-does-not-reuse-grant",
       "steps": [
         {"action": "submit", "expect": "reserved"},
@@ -188,6 +226,26 @@
         {"action": "submit", "expect": "reserved"},
         {"action": "dispatch", "expect": "unresolved"},
         {"action": "complete", "result": "synthetic-signature-01", "authenticated": false, "expect": "unauthenticated-result"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-other-key-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultBindingPatch": {"credentialID": "credential-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-other-input-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultBindingPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "outcome-mismatch"},
         {"action": "lookup", "expect": "unresolved"}
       ],
       "invocations": 1
