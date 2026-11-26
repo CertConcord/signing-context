@@ -11,8 +11,10 @@ const boundFields = [
 const copy = value => structuredClone(value);
 const sameScope = (left, right) => left.service === right.service &&
   left.audience === right.audience;
-const statusOf = record => record.status === 'completed'
-  ? `completed:${record.result}` : record.status;
+const statusOf = record => {
+  if (record.status === 'completed') return `completed:${record.result}`;
+  return record.status === 'expired' ? 'unknown' : record.status;
+};
 const validDigest = value => typeof value === 'string' &&
   Buffer.from(value, 'base64').length === 32 &&
   Buffer.from(value, 'base64').toString('base64') === value;
@@ -34,7 +36,7 @@ function validClientId(value) {
 
 function runCase(corpus, vector) {
   const request = copy(corpus.baseRequest);
-  const authorization = copy(corpus.baseAuthorization);
+  const authorization = {...copy(corpus.baseAuthorization), ...copy(vector.authorizationPatch ?? {})};
   const baseCaller = copy(corpus.baseAuthenticatedCaller);
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
@@ -108,6 +110,7 @@ function runCase(corpus, vector) {
           ? statusOf(record) : 'immutable-result';
         record.result = step.result;
         record.status = 'completed';
+        record.resultAvailableUntil = now + record.request.validity_period;
         return 'completed';
       case 'lookup': {
         const caller = callerFor(step);
@@ -130,7 +133,13 @@ function runCase(corpus, vector) {
         durable = copy(durable);
         return durable.record ? statusOf(durable.record) : 'unknown';
       case 'revoke': durable.revoked = true; return 'revoked';
-      case 'advance': now = step.now; return 'time-advanced';
+      case 'advance':
+        now = step.now;
+        if (record?.status === 'completed' && now > record.resultAvailableUntil) {
+          record.status = 'expired';
+          record.result = null;
+        }
+        return 'time-advanced';
       default: throw new Error(`Unknown action ${step.action}`);
     }
   }
