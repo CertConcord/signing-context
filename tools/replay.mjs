@@ -5,7 +5,7 @@ import {isDeepStrictEqual} from 'node:util';
 const boundFields = [
   'service', 'audience', 'credentialID', 'authorizationRef', 'inputKind',
   'hashes', 'hashAlgorithmOID', 'signAlgo', 'signAlgoParams',
-  'operationMode', 'policyEpoch'
+  'operationMode', 'validity_period', 'response_uri', 'policyEpoch'
 ];
 
 const copy = value => structuredClone(value);

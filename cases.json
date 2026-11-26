@@ -13,6 +13,8 @@
     "signAlgo": "1.2.840.113549.1.1.1",
     "signAlgoParams": null,
     "operationMode": "A",
+    "validity_period": 60000,
+    "response_uri": "https://client.example/signing-events",
     "policyEpoch": 7
   },
   "baseAuthorization": {
@@ -26,6 +28,8 @@
     "signAlgo": "1.2.840.113549.1.1.1",
     "signAlgoParams": null,
     "operationMode": "A",
+    "validity_period": 60000,
+    "response_uri": "https://client.example/signing-events",
     "policyEpoch": 7,
     "expiresAt": 50
   },
@@ -82,6 +86,38 @@
       "steps": [
         {"action": "submit", "expect": "reserved"},
         {"action": "submit", "requestPatch": {"signAlgoParams": "saltLength=32"}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-id-changed-validity-period",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"validity_period": 120000}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-id-changed-response-uri",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"response_uri": "https://other.example/receive"}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "dispatch-changed-validity-period",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"validity_period": 120000}, "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "dispatch-changed-response-uri",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"response_uri": "https://other.example/receive"}, "expect": "boundary-mismatch"}
       ],
       "invocations": 0
     },
