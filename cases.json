@@ -1,12 +1,439 @@
-{"cases":[
-  {"id":"same-id-same-completed-input","expected":"return original authenticated result without invoking the key"},
-  {"id":"same-id-changed-input","expected":"reject"},
-  {"id":"lost-response-after-dispatch","expected":"unresolved until original outcome is reconciled"},
-  {"id":"crash-before-dispatch","expected":"recover according to durable reservation; do not restore spent authority"},
-  {"id":"provider-or-key-substitution","expected":"new authorization required"},
-  {"id":"expired-authorization-before-dispatch","expected":"reject"},
-  {"id":"unattested-protected-enforcement-claim","expected":"reject claim; preserve narrower declared capability"},
-  {"id":"context-added-only-to-unsigned-response","expected":"no protected-enforcement evidence"},
-  {"id":"cancellation-after-dispatch","expected":"must not claim non-execution"},
-  {"id":"recovery-resets-replay-state","expected":"reject"}
-]}
+{
+  "format": "synthetic-protected-signing-v1",
+  "sourceMessageHex": "68656c6c6f",
+  "baseRequest": {
+    "service": "https://sign.example/csc/v2",
+    "audience": "client.example",
+    "credentialID": "credential-01",
+    "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw",
+    "authorizationRef": "grant-01",
+    "inputKind": "digest",
+    "hashes": ["LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ="],
+    "hashAlgorithmOID": "2.16.840.1.101.3.4.2.1",
+    "signAlgo": "1.2.840.113549.1.1.1",
+    "signAlgoParams": null,
+    "operationMode": "A",
+    "policyEpoch": 7
+  },
+  "baseAuthorization": {
+    "service": "https://sign.example/csc/v2",
+    "audience": "client.example",
+    "credentialID": "credential-01",
+    "authorizationRef": "grant-01",
+    "inputKind": "digest",
+    "hashes": ["LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ="],
+    "hashAlgorithmOID": "2.16.840.1.101.3.4.2.1",
+    "signAlgo": "1.2.840.113549.1.1.1",
+    "signAlgoParams": null,
+    "operationMode": "A",
+    "policyEpoch": 7,
+    "expiresAt": 50
+  },
+  "baseSelection": {
+    "providerIdentity": "provider-instance-01",
+    "keyIdentity": "key-version-01"
+  },
+  "baseAuthorizationSelection": {
+    "providerIdentity": "provider-instance-01",
+    "keyIdentity": "key-version-01"
+  },
+  "baseAuthenticatedCaller": {
+    "authenticated": true,
+    "service": "https://sign.example/csc/v2",
+    "audience": "client.example"
+  },
+  "baseCapability": {
+    "profile": "sc1",
+    "evidence": "authenticated-service-policy",
+    "boundary": "service",
+    "durableReservation": true,
+    "clientLookup": true
+  },
+  "cases": [
+    {
+      "id": "completed-original-and-same-request",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"},
+        {"action": "submit", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "same-id-changed-digest",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-id-changed-algorithm",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10"}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-id-changed-parameters",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"signAlgoParams": "saltLength=32"}, "expect": "collision"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "changed-digest-after-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "submit", "requestPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "collision"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "duplicate-admission-before-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "submit", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "key-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"credentialID": "credential-02"}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-credential-selects-other-key-before-admission",
+      "selectionPatch": {"keyIdentity": "key-version-02"},
+      "steps": [{"action": "submit", "expect": "unauthorized"}],
+      "invocations": 0
+    },
+    {
+      "id": "same-credential-remapped-to-other-key-at-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "same-service-routes-to-other-provider-at-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveSelectionPatch": {"providerIdentity": "provider-instance-02"}, "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "digest-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "provider-replaced-at-execution-boundary",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"service": "https://other.example/csc/v2"}, "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "different-key-with-same-grant",
+      "steps": [
+        {"action": "submit", "requestPatch": {"credentialID": "credential-02"}, "expect": "unauthorized"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "different-provider-with-same-grant",
+      "steps": [
+        {"action": "submit", "requestPatch": {"service": "https://other.example/csc/v2"}, "expect": "unauthorized"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "message-instead-of-digest",
+      "steps": [
+        {"action": "submit", "requestPatch": {"inputKind": "message"}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-client-cannot-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "lookup", "callerPatch": {"audience": "other.example"}, "expect": "unknown"},
+        {"action": "lookup", "callerPatch": {"audience": "other.example"}, "clientData": "sc1:EBESExQVFhcYGRobHB0eHw", "expect": "unknown"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-client-same-id-submit-does-not-reveal-collision",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "requestPatch": {"audience": "other.example"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"audience": "other.example"}, "requestPatch": {"audience": "other.example", "clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "unauthorized"},
+        {"action": "lookup", "expect": "reserved"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-service-same-id-submit-does-not-reveal-collision",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"service": "https://other.example/csc/v2"}, "requestPatch": {"service": "https://other.example/csc/v2"}, "expect": "unauthorized"},
+        {"action": "submit", "callerPatch": {"service": "https://other.example/csc/v2"}, "requestPatch": {"service": "https://other.example/csc/v2", "clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "unauthorized"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-service-same-id-cannot-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "lookup", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": "unknown"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "unauthenticated-caller-cannot-submit-or-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "submit", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "lookup", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "lookup", "expect": "reserved"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "other-client-id-cannot-query",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "lookup", "clientData": "sc1:EBESExQVFhcYGRobHB0eHw", "expect": "unknown"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "lost-initial-response-after-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "restart", "expect": "unresolved"},
+        {"action": "submit", "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "lost-response-retry-after-key-alias-remap",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "restart", "expect": "unresolved"},
+        {"action": "remap", "selectionPatch": {"keyIdentity": "key-version-02"}, "expect": "selection-changed"},
+        {"action": "submit", "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authorized-result-retrievable-after-grant-expiry",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "advance", "now": 51, "expect": "time-advanced"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"},
+        {"action": "submit", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "crash-before-dispatch-does-not-reuse-grant",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "restart", "expect": "reserved"},
+        {"action": "submit", "requestPatch": {"clientData": "sc1:EBESExQVFhcYGRobHB0eHw"}, "expect": "grant-spent"},
+        {"action": "lookup", "expect": "reserved"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "expired-authorization-before-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "advance", "now": 51, "expect": "time-advanced"},
+        {"action": "dispatch", "expect": "authorization-expired"},
+        {"action": "lookup", "expect": "authorization-expired"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "revoked-authorization-before-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "revoke", "expect": "revoked"},
+        {"action": "dispatch", "expect": "authorization-revoked"},
+        {"action": "restart", "expect": "authorization-revoked"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "cancel-after-dispatch-is-unresolved",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "cancel", "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "foreign-caller-cannot-probe-cancellation-status",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "cancel", "callerPatch": {"audience": "other.example"}, "expect": "unknown"},
+        {"action": "cancel", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": "unknown"},
+        {"action": "cancel", "callerPatch": {"authenticated": false}, "expect": "access-denied"},
+        {"action": "cancel", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "unsigned-result-is-not-protected-evidence",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": false, "expect": "unauthenticated-result"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-other-key-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultBindingPatch": {"credentialID": "credential-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-remapped-key-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "authenticated-result-for-other-input-is-rejected",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "resultBindingPatch": {"hashes": ["NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "completed-outcome-is-immutable",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-02", "authenticated": true, "expect": "immutable-result"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "unauthenticated-repeat-completion-cannot-read-outcome",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": false, "expect": "unauthenticated-result"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "repeat-completion-for-other-key-cannot-read-outcome",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "resultSelectionPatch": {"keyIdentity": "key-version-02"}, "expect": "outcome-mismatch"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "claim-with-unsigned-policy",
+      "capabilityPatch": {"evidence": "unsigned-client-text"},
+      "steps": [{"action": "submit", "expect": "unsupported"}],
+      "invocations": 0
+    },
+    {
+      "id": "application-only-preauthorization",
+      "capabilityPatch": {"boundary": "application"},
+      "steps": [{"action": "submit", "expect": "unsupported"}],
+      "invocations": 0
+    },
+    {
+      "id": "no-durable-recovery-capability",
+      "capabilityPatch": {"durableReservation": false},
+      "steps": [{"action": "submit", "expect": "unsupported"}],
+      "invocations": 0
+    },
+    {
+      "id": "no-client-known-lookup",
+      "capabilityPatch": {"clientLookup": false},
+      "steps": [{"action": "submit", "expect": "unsupported"}],
+      "invocations": 0
+    },
+    {
+      "id": "unnegotiated-profile",
+      "capabilityPatch": {"profile": "ordinary-csc"},
+      "steps": [{"action": "submit", "expect": "unsupported"}],
+      "invocations": 0
+    },
+    {
+      "id": "batch-outside-bounded-profile",
+      "steps": [
+        {"action": "submit", "requestPatch": {"hashes": ["LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=", "NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU="]}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "unknown-client-id-is-not-proof-of-nonexecution",
+      "steps": [{"action": "lookup", "expect": "unknown"}],
+      "invocations": 0
+    }
+  ]
+}
