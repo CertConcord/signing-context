@@ -111,6 +111,15 @@ function pssParams(encoded) {
   return {hashOid, maskHashOid, saltLength};
 }
 
+function pssFitsModulus(params, modulusBits) {
+  if (!Number.isSafeInteger(modulusBits) || modulusBits < 2) return false;
+  const hashLength = digestLengths.get(params.hashOid);
+  if (!hashLength) return false;
+  // RFC 8017: emLen = ceil((modBits - 1) / 8), and emLen >= hLen + sLen + 2.
+  const encodedLength = (BigInt(modulusBits) + 6n) / 8n;
+  return encodedLength >= BigInt(hashLength) + BigInt(params.saltLength) + 2n;
+}
+
 export function supportedSigningTuple(candidate) {
   if (!Array.isArray(candidate.hashes) || candidate.hashes.length !== 1) return false;
   const digest = canonicalBytes(candidate.hashes[0]);
@@ -152,11 +161,18 @@ export function selectedKeyEvidencePermits(candidate, evidence, selection) {
   }
   if (candidate.signAlgo !== pssOid ||
       !(keyAlgos.includes(rsaEncryptionOid) || keyAlgos.includes(pssOid))) return false;
+  if (!Number.isSafeInteger(evidence.keyLenBits) || evidence.keyLenBits < 2) return false;
+  let requested;
+  try {
+    requested = pssParams(candidate.signAlgoParams);
+  } catch {
+    return false;
+  }
+  if (!pssFitsModulus(requested, evidence.keyLenBits)) return false;
   if (spkiAlgorithm === rsaEncryptionOid) return spkiParams === 'BQA=';
   if (spkiAlgorithm !== pssOid) return false;
   if (spkiParams === null) return true; // The certified PSS AlgorithmIdentifier omitted parameters.
   try {
-    const requested = pssParams(candidate.signAlgoParams);
     const restricted = pssParams(spkiParams);
     return requested.hashOid === restricted.hashOid &&
       requested.maskHashOid === restricted.maskHashOid &&
