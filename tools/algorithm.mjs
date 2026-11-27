@@ -11,6 +11,8 @@ const hashOidByDer = new Map([
   ['608648016503040203', '2.16.840.1.101.3.4.2.3']
 ]);
 const mgf1OidDer = '2a864886f70d010108';
+const rsaEncryptionOid = '1.2.840.113549.1.1.1';
+const pssOid = '1.2.840.113549.1.1.10';
 
 export function canonicalBytes(value) {
   if (typeof value !== 'string' || value.length === 0 || value.length > 8192) return null;
@@ -81,7 +83,7 @@ function integer(bytes, offset, limit) {
   return number;
 }
 
-function pssHashOid(encoded) {
+function pssParams(encoded) {
   const bytes = canonicalBytes(encoded);
   if (!bytes || bytes.length > 4096) throw new Error('invalid PSS parameters');
   const sequence = only(bytes, 0, bytes.length, 0x30);
@@ -89,21 +91,24 @@ function pssHashOid(encoded) {
   let previousTag = 0x9f;
   let hashOid = null;
   let maskHashOid = null;
+  let saltLength = 20;
   while (offset < sequence.end) {
     const field = tlv(bytes, offset, sequence.end);
     if (field.tag < 0xa0 || field.tag > 0xa3 || field.tag <= previousTag)
       throw new Error('unexpected PSS field');
     if (field.tag === 0xa0) hashOid = hashAlgorithm(bytes, field.start, field.end);
     if (field.tag === 0xa1) maskHashOid = maskAlgorithm(bytes, field.start, field.end);
-    if (field.tag === 0xa2 && integer(bytes, field.start, field.end) === 20)
-      throw new Error('explicit DER default salt length');
+    if (field.tag === 0xa2) {
+      saltLength = integer(bytes, field.start, field.end);
+      if (saltLength === 20) throw new Error('explicit DER default salt length');
+    }
     if (field.tag === 0xa3) throw new Error('explicit DER default trailer');
     previousTag = field.tag;
     offset = field.next;
   }
   // Missing hash or MGF fields default to SHA-1 in RFC 8017, below this profile's scope.
   if (!hashOid || !maskHashOid) throw new Error('SHA-1 PSS defaults unsupported');
-  return hashOid;
+  return {hashOid, maskHashOid, saltLength};
 }
 
 export function supportedSigningTuple(candidate) {
@@ -111,12 +116,12 @@ export function supportedSigningTuple(candidate) {
   const digest = canonicalBytes(candidate.hashes[0]);
   if (!digest) return false;
   let hashOid;
-  if (candidate.signAlgo === '1.2.840.113549.1.1.1' &&
+  if (candidate.signAlgo === rsaEncryptionOid &&
       candidate.signAlgoParams == null) {
     hashOid = candidate.hashAlgorithmOID;
-  } else if (candidate.signAlgo === '1.2.840.113549.1.1.10') {
+  } else if (candidate.signAlgo === pssOid) {
     try {
-      hashOid = pssHashOid(candidate.signAlgoParams);
+      hashOid = pssParams(candidate.signAlgoParams).hashOid;
     } catch {
       return false;
     }
@@ -126,4 +131,37 @@ export function supportedSigningTuple(candidate) {
     return false;
   }
   return digestLengths.get(hashOid) === digest.length;
+}
+
+// This reads trusted fixture metadata for the actually selected key, not CSC request fields.
+// A real service must verify the certificate and enforce restrictions at its signer boundary.
+export function selectedKeyEvidencePermits(candidate, evidence, selection) {
+  if (evidence?.verified !== true ||
+      evidence.credentialID !== candidate.credentialID ||
+      evidence.providerIdentity !== selection.providerIdentity ||
+      evidence.keyIdentity !== selection.keyIdentity ||
+      !Array.isArray(evidence.keyAlgos) ||
+      !Object.hasOwn(evidence, 'certifiedSpkiParamsBase64')) return false;
+
+  const keyAlgos = evidence.keyAlgos;
+  const spkiAlgorithm = evidence.certifiedSpkiAlgorithm;
+  const spkiParams = evidence.certifiedSpkiParamsBase64;
+  if (candidate.signAlgo === rsaEncryptionOid) {
+    return keyAlgos.includes(rsaEncryptionOid) &&
+      spkiAlgorithm === rsaEncryptionOid && spkiParams === 'BQA=';
+  }
+  if (candidate.signAlgo !== pssOid ||
+      !(keyAlgos.includes(rsaEncryptionOid) || keyAlgos.includes(pssOid))) return false;
+  if (spkiAlgorithm === rsaEncryptionOid) return spkiParams === 'BQA=';
+  if (spkiAlgorithm !== pssOid) return false;
+  if (spkiParams === null) return true; // The certified PSS AlgorithmIdentifier omitted parameters.
+  try {
+    const requested = pssParams(candidate.signAlgoParams);
+    const restricted = pssParams(spkiParams);
+    return requested.hashOid === restricted.hashOid &&
+      requested.maskHashOid === restricted.maskHashOid &&
+      requested.saltLength >= restricted.saltLength;
+  } catch {
+    return false;
+  }
 }

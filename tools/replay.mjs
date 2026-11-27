@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {canonicalBytes, supportedSigningTuple} from './algorithm.mjs';
+import {canonicalBytes, selectedKeyEvidencePermits, supportedSigningTuple} from './algorithm.mjs';
 
 const boundFields = [
   'service', 'audience', 'credentialID', 'authorizationRef', 'inputKind',
@@ -50,6 +50,8 @@ function runCase(corpus, vector) {
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   let credentialStatus = Object.hasOwn(vector, 'initialCredentialStatus')
     ? vector.initialCredentialStatus : corpus.baseCredentialStatus;
+  const selectedKeyEvidence = {...copy(corpus.baseSelectedKeyEvidence),
+    ...copy(vector.selectedKeyPatch ?? {})};
   const serviceInfo = {...copy(corpus.baseServiceInfo), ...copy(vector.serviceInfoPatch ?? {})};
   if (vector.omitAsyncSupport === true) delete serviceInfo.asynchronousOperationMode;
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
@@ -102,6 +104,8 @@ function runCase(corpus, vector) {
     if (durable.revoked || now > authorization.expiresAt) return 'unauthorized';
     if (!sameBoundFields(candidate, authorization) ||
         !isDeepStrictEqual(resolvedSelection, corpus.baseAuthorizationSelection)) return 'unauthorized';
+    if (!selectedKeyEvidencePermits(candidate, selectedKeyEvidence, resolvedSelection))
+      return 'key-incompatible';
     if (durable.grantUse.some(use => sameScope(use.caller, caller) &&
         use.authorizationRef === candidate.authorizationRef)) return 'grant-spent';
     if (prior) return 'capacity-unavailable';
@@ -131,6 +135,8 @@ function runCase(corpus, vector) {
               !sameBoundFields(effective, record.request) ||
               !supportedSigningTuple(effective) ||
               !isDeepStrictEqual(selected, record.selection)) return (record.status = 'boundary-mismatch');
+          if (!selectedKeyEvidencePermits(effective, selectedKeyEvidence, selected))
+            return (record.status = 'key-incompatible');
         }
         record.status = 'unresolved';
         invocations++;
@@ -169,6 +175,9 @@ function runCase(corpus, vector) {
       case 'changeCredentialStatus':
         credentialStatus = step.status;
         return 'credential-status-changed';
+      case 'changeSelectedKeyEvidence':
+        Object.assign(selectedKeyEvidence, copy(step.selectedKeyPatch));
+        return 'selected-key-evidence-changed';
       case 'changeServiceInfo':
         Object.assign(serviceInfo, copy(step.serviceInfoPatch));
         return 'service-info-changed';
