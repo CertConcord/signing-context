@@ -88,6 +88,63 @@
       "invocations": 1
     },
     {
+      "id": "omitted-validity-without-declared-default-is-unsupported",
+      "omitValidityPeriod": true,
+      "steps": [
+        {"action": "submit", "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "omitted-validity-with-zero-default-is-unsupported",
+      "omitValidityPeriod": true,
+      "capabilityPatch": {"defaultValidityPeriod": 0},
+      "steps": [
+        {"action": "submit", "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "omitted-validity-uses-admitted-default-and-expires",
+      "omitValidityPeriod": true,
+      "capabilityPatch": {"defaultValidityPeriod": 2},
+      "authorizationPatch": {"expiresAt": 100},
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "changeDefaultValidityPeriod", "value": 100000, "expect": "policy-changed"},
+        {"action": "submit", "expect": "completed:synthetic-signature-01"},
+        {"action": "advance", "now": 3, "expect": "time-advanced"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"},
+        {"action": "advance", "now": 4, "expect": "time-advanced"},
+        {"action": "lookup", "expect": "unknown"},
+        {"action": "submit", "expect": "unknown"},
+        {"action": "restart", "expect": "unknown"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "explicit-validity-overrides-shorter-policy-default",
+      "capabilityPatch": {"defaultValidityPeriod": 2},
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "advance", "now": 4, "expect": "time-advanced"},
+        {"action": "lookup", "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "zero-validity-cannot-claim-bounded-recovery",
+      "authorizationPatch": {"validity_period": 0},
+      "steps": [
+        {"action": "submit", "requestPatch": {"validity_period": 0}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
       "id": "same-id-changed-digest",
       "steps": [
         {"action": "submit", "expect": "reserved"},
