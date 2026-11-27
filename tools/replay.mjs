@@ -43,6 +43,10 @@ function runCase(corpus, vector) {
   }
   const baseCaller = copy(corpus.baseAuthenticatedCaller);
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
+  let credentialStatus = Object.hasOwn(vector, 'initialCredentialStatus')
+    ? vector.initialCredentialStatus : corpus.baseCredentialStatus;
+  const serviceInfo = {...copy(corpus.baseServiceInfo), ...copy(vector.serviceInfoPatch ?? {})};
+  if (vector.omitAsyncSupport === true) delete serviceInfo.asynchronousOperationMode;
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
   let durable = {record: null, grantUse: [], revoked: false};
   let now = 1;
@@ -50,6 +54,21 @@ function runCase(corpus, vector) {
 
   function callerFor(step) {
     return {...baseCaller, ...copy(step.callerPatch ?? {})};
+  }
+
+  function serviceSupports(candidate) {
+    const params = candidate.signAlgoParams;
+    const paramsSupported = params == null ||
+      (typeof params === 'string' && params.length > 0 &&
+        Array.isArray(serviceInfo.signAlgorithms?.algoParams) &&
+        serviceInfo.signAlgorithms.algoParams.includes(params));
+    return Array.isArray(serviceInfo.methods) &&
+      serviceInfo.methods.includes('signatures/signHash') &&
+      serviceInfo.methods.includes('signatures/signPolling') &&
+      serviceInfo.asynchronousOperationMode === true &&
+      Array.isArray(serviceInfo.signAlgorithms?.algos) &&
+      serviceInfo.signAlgorithms.algos.includes(candidate.signAlgo) &&
+      paramsSupported;
   }
 
   function submit(candidate, caller) {
@@ -68,6 +87,8 @@ function runCase(corpus, vector) {
         prior.request.clientData === candidate.clientData) {
       return sameBoundFields(prior.request, candidate) ? statusOf(prior) : 'collision';
     }
+    if (!serviceSupports(candidate)) return 'unsupported';
+    if (credentialStatus !== 'enabled') return 'key-unavailable';
     const effectiveValidityPeriod = candidate.validity_period === undefined
       ? capability.defaultValidityPeriod : candidate.validity_period;
     if (!Number.isSafeInteger(effectiveValidityPeriod) ||
@@ -94,6 +115,8 @@ function runCase(corpus, vector) {
         if (!record || record.status !== 'reserved') return 'invalid-transition';
         if (durable.revoked) return (record.status = 'authorization-revoked');
         if (now > authorization.expiresAt) return (record.status = 'authorization-expired');
+        if (!serviceSupports(record.request)) return (record.status = 'service-unavailable');
+        if (credentialStatus !== 'enabled') return (record.status = 'key-unavailable');
         {
           const effective = {...record.request, ...copy(step.effectiveRequestPatch ?? {})};
           const selected = {...resolvedSelection, ...copy(step.effectiveSelectionPatch ?? {})};
@@ -135,6 +158,12 @@ function runCase(corpus, vector) {
       case 'changeDefaultValidityPeriod':
         capability.defaultValidityPeriod = step.value;
         return 'policy-changed';
+      case 'changeCredentialStatus':
+        credentialStatus = step.status;
+        return 'credential-status-changed';
+      case 'changeServiceInfo':
+        Object.assign(serviceInfo, copy(step.serviceInfoPatch));
+        return 'service-info-changed';
       case 'cancel': {
         const caller = callerFor(step);
         if (caller.authenticated !== true) return 'access-denied';
