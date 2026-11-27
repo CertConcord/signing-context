@@ -1033,6 +1033,79 @@
       "invocations": 0
     },
     {
+      "id": "profile-client-id-poll-lifecycle",
+      "authorizationPatch": {"expiresAt": 120000},
+      "steps": [
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": "unrelated-poll-metadata", "expect": {"httpStatus": 202, "body": null}},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "restart", "expect": "unresolved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "unresolved"}}},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"signatures": ["synthetic-signature-01"]}}},
+        {"action": "advance", "now": 60002, "expect": "time-advanced"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "unknown"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "profile-client-id-poll-stopped-before-dispatch",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "remap", "selectionPatch": {"keyIdentity": "key-version-02"}, "expect": "selection-changed"},
+        {"action": "dispatch", "expect": "boundary-mismatch"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "not-invoked"}}},
+        {"action": "restart", "expect": "boundary-mismatch"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "not-invoked"}}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-hides-other-requester-and-wrong-id",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"audience": "other.example"}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-requires-request-id-field",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": null, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:not-base64", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-unauthenticated-caller",
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"authenticated": false}, "expect": {"httpStatus": 401, "body": {"error": "invalid_token"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "callerPatch": {"authenticated": false}, "expect": {"httpStatus": 401, "body": {"error": "invalid_token"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-unnegotiated",
+      "capabilityPatch": {"profile": "ordinary-csc"},
+      "steps": [
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
       "id": "unknown-client-id-is-not-proof-of-nonexecution",
       "steps": [{"action": "lookup", "expect": "unknown"}],
       "invocations": 0

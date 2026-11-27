@@ -117,6 +117,30 @@ function runCase(corpus, vector) {
     return 'reserved';
   }
 
+  // Only the negotiated sc1 client-ID form is modeled; ordinary server-ID polling is unchanged.
+  function profileClientPoll(step) {
+    const caller = callerFor(step);
+    if (caller.authenticated !== true)
+      return {httpStatus: 401, body: {error: 'invalid_token'}};
+    const unavailable = {httpStatus: 400, body: {error: 'invalid_request'}};
+    if (capability.profile !== 'sc1' || capability.clientLookup !== true ||
+        !validClientId(step.requestID)) return unavailable;
+    const record = durable.record;
+    if (!record || !sameScope(caller, record.caller) ||
+        step.requestID !== record.request.clientData || record.status === 'expired')
+      return unavailable;
+    if (record.status === 'completed')
+      return {httpStatus: 200, body: {signatures: [record.result]}};
+    if (record.status === 'reserved') return {httpStatus: 202, body: null};
+    if (record.status === 'unresolved')
+      return {httpStatus: 200, body: {outcomeState: 'unresolved'}};
+    const stopped = ['authorization-revoked', 'authorization-expired',
+      'service-unavailable', 'key-unavailable', 'boundary-mismatch', 'key-incompatible'];
+    assert(stopped.includes(record.status) && invocations === 0,
+      'not-invoked response requires durable pre-dispatch state');
+    return {httpStatus: 200, body: {outcomeState: 'not-invoked'}};
+  }
+
   function stepResult(step) {
     const record = durable.record;
     switch (step.action) {
@@ -166,6 +190,7 @@ function runCase(corpus, vector) {
         if ((step.clientData ?? request.clientData) !== record.request.clientData) return 'unknown';
         return statusOf(record);
       }
+      case 'poll': return profileClientPoll(step);
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
@@ -203,7 +228,11 @@ function runCase(corpus, vector) {
   }
 
   for (const [index, step] of vector.steps.entries()) {
-    assert.equal(stepResult(step), step.expect, `${vector.id} step ${index + 1}`);
+    const actual = stepResult(step);
+    if (step.action === 'poll')
+      assert.deepEqual(actual, step.expect, `${vector.id} step ${index + 1}`);
+    else
+      assert.equal(actual, step.expect, `${vector.id} step ${index + 1}`);
   }
   assert.equal(invocations, vector.invocations, `${vector.id} invocation count`);
 }
