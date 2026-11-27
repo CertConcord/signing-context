@@ -10,8 +10,11 @@ const boundFields = [
 ];
 
 const copy = value => structuredClone(value);
-const sameScope = (left, right) => left.service === right.service &&
+const sameServiceAudience = (left, right) => left.service === right.service &&
   left.audience === right.audience;
+const sameScope = (left, right) => sameServiceAudience(left, right) &&
+  left.authorizationMode === right.authorizationMode &&
+  left.owner === right.owner;
 const statusOf = record => {
   if (record.status === 'completed') return `completed:${record.result}`;
   return record.status === 'expired' ? 'unknown' : record.status;
@@ -36,6 +39,10 @@ function validClientId(value) {
 }
 
 function runCase(corpus, vector) {
+  // This fixture flag separates negotiated wire polling from legacy internal status tests.
+  const wireFixture = vector.wireFixture === true;
+  assert.equal(wireFixture, vector.steps.some(step => step.action === 'poll'),
+    `${vector.id} wire fixture boundary`);
   const request = copy(corpus.baseRequest);
   const authorization = {...copy(corpus.baseAuthorization), ...copy(vector.authorizationPatch ?? {})};
   if (vector.omitValidityPeriod === true) {
@@ -88,7 +95,10 @@ function runCase(corpus, vector) {
     if (candidate.inputKind !== 'digest' || candidate.operationMode !== 'A' ||
         !Array.isArray(candidate.hashes) || candidate.hashes.length !== 1 ||
         !canonicalBytes(candidate.hashes[0]) || !validClientId(candidate.clientData)) return 'unsupported';
-    if (!sameScope(candidate, caller)) return 'unauthorized';
+    if (!sameServiceAudience(candidate, caller)) return 'unauthorized';
+    if (caller.authorizationMode !== 'user-specific' ||
+        typeof caller.owner !== 'string' || caller.owner.length === 0 ||
+        caller.owner !== authorization.owner) return 'unauthorized';
     const prior = durable.record;
     if (prior && sameScope(prior.caller, caller) &&
         prior.request.clientData === candidate.clientData) {
@@ -115,6 +125,38 @@ function runCase(corpus, vector) {
       effectiveValidityPeriod,
       status: 'reserved', result: null};
     return 'reserved';
+  }
+
+  // Only the negotiated sc1 client-ID form is modeled; ordinary server-ID polling is unchanged.
+  function profileClientPoll(step) {
+    assert(wireFixture, 'poll is only modeled in a wire fixture');
+    const caller = callerFor(step);
+    if (caller.authenticated !== true)
+      return {httpStatus: 401, body: {error: 'invalid_token'}};
+    const unavailable = {httpStatus: 400, body: {error: 'invalid_request'}};
+    if (capability.profile !== 'sc1' || capability.clientLookup !== true ||
+        caller.authorizationMode !== 'user-specific' ||
+        typeof caller.owner !== 'string' || caller.owner.length === 0 ||
+        Object.hasOwn(step, 'userID') ||
+        (Object.hasOwn(step, 'clientData') && typeof step.clientData !== 'string') ||
+        !validClientId(step.requestID)) return unavailable;
+    const record = durable.record;
+    if (!record || !sameScope(caller, record.caller) ||
+        step.requestID !== record.request.clientData || record.status === 'expired')
+      return unavailable;
+    if (record.status === 'completed') {
+      assert.match(record.signatureBytesHex, /^(?:[a-f0-9]{2})+$/);
+      return {httpStatus: 200, body: {
+        signatures: [Buffer.from(record.signatureBytesHex, 'hex').toString('base64')]}};
+    }
+    if (record.status === 'reserved') return {httpStatus: 202, body: null};
+    if (record.status === 'unresolved')
+      return {httpStatus: 200, body: {outcomeState: 'unresolved'}};
+    const stopped = ['authorization-revoked', 'authorization-expired',
+      'service-unavailable', 'key-unavailable', 'boundary-mismatch', 'key-incompatible'];
+    assert(stopped.includes(record.status) && invocations === 0,
+      'not-invoked response requires durable pre-dispatch state');
+    return {httpStatus: 200, body: {outcomeState: 'not-invoked'}};
   }
 
   function stepResult(step) {
@@ -152,9 +194,15 @@ function runCase(corpus, vector) {
         }
         if (step.resultSelectionPatch && !isDeepStrictEqual(
           {...record.selection, ...copy(step.resultSelectionPatch)}, record.selection)) return 'outcome-mismatch';
-        if (record.status === 'completed') return record.result === step.result
+        if (Object.hasOwn(step, 'signatureBytesHex') &&
+            (typeof step.signatureBytesHex !== 'string' ||
+             !/^(?:[a-f0-9]{2})+$/.test(step.signatureBytesHex))) return 'outcome-mismatch';
+        if (wireFixture && !Object.hasOwn(step, 'signatureBytesHex')) return 'outcome-mismatch';
+        if (record.status === 'completed') return record.result === step.result &&
+          record.signatureBytesHex === (step.signatureBytesHex ?? null)
           ? statusOf(record) : 'immutable-result';
         record.result = step.result;
+        record.signatureBytesHex = step.signatureBytesHex ?? null;
         record.status = 'completed';
         record.resultAvailableUntil = now + record.effectiveValidityPeriod;
         return 'completed';
@@ -166,6 +214,13 @@ function runCase(corpus, vector) {
         if ((step.clientData ?? request.clientData) !== record.request.clientData) return 'unknown';
         return statusOf(record);
       }
+      case 'poll': return profileClientPoll(step);
+      case 'inspectDurable':
+        return {status: record?.status, result: record?.result,
+          signatureBytesHex: record?.signatureBytesHex,
+          resultAvailableUntil: record?.resultAvailableUntil,
+          clientData: record?.request.clientData,
+          grantUses: durable.grantUse.length};
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
@@ -196,6 +251,8 @@ function runCase(corpus, vector) {
         if (record?.status === 'completed' && now > record.resultAvailableUntil) {
           record.status = 'expired';
           record.result = null;
+          record.signatureBytesHex = null;
+          record.resultAvailableUntil = null;
         }
         return 'time-advanced';
       default: throw new Error(`Unknown action ${step.action}`);
@@ -203,7 +260,18 @@ function runCase(corpus, vector) {
   }
 
   for (const [index, step] of vector.steps.entries()) {
-    assert.equal(stepResult(step), step.expect, `${vector.id} step ${index + 1}`);
+    const actual = stepResult(step);
+    if (step.action === 'poll' || step.action === 'inspectDurable') {
+      assert.deepEqual(actual, step.expect, `${vector.id} step ${index + 1}`);
+      if (step.expectSignatureHex !== undefined) {
+        const encoded = actual.body?.signatures?.[0];
+        assert.equal(typeof encoded, 'string', `${vector.id} signature encoding`);
+        const bytes = Buffer.from(encoded, 'base64');
+        assert.equal(bytes.toString('hex'), step.expectSignatureHex, `${vector.id} signature bytes`);
+        assert.equal(bytes.toString('base64'), encoded, `${vector.id} canonical base64`);
+      }
+    } else
+      assert.equal(actual, step.expect, `${vector.id} step ${index + 1}`);
   }
   assert.equal(invocations, vector.invocations, `${vector.id} invocation count`);
 }

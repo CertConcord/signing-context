@@ -31,6 +31,7 @@
     "validity_period": 60000,
     "response_uri": "https://client.example/signing-events",
     "policyEpoch": 7,
+    "owner": "owner-01",
     "expiresAt": 50
   },
   "baseSelection": {
@@ -60,7 +61,9 @@
   "baseAuthenticatedCaller": {
     "authenticated": true,
     "service": "https://sign.example/csc/v2",
-    "audience": "client.example"
+    "audience": "client.example",
+    "authorizationMode": "user-specific",
+    "owner": "owner-01"
   },
   "baseCapability": {
     "profile": "sc1",
@@ -1033,9 +1036,191 @@
       "invocations": 0
     },
     {
+      "id": "profile-client-id-poll-lifecycle",
+      "wireFixture": true,
+      "authorizationPatch": {"expiresAt": 120000},
+      "steps": [
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": "unrelated-poll-metadata", "expect": {"httpStatus": 202, "body": null}},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "restart", "expect": "unresolved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "unresolved"}}},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"signatures": ["AQIDBA=="]}}, "expectSignatureHex": "01020304"},
+        {"action": "advance", "now": 60002, "expect": "time-advanced"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "unknown"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "profile-client-id-poll-stopped-before-dispatch",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "remap", "selectionPatch": {"keyIdentity": "key-version-02"}, "expect": "selection-changed"},
+        {"action": "dispatch", "expect": "boundary-mismatch"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "not-invoked"}}},
+        {"action": "restart", "expect": "boundary-mismatch"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "not-invoked"}}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-hides-other-requester-and-wrong-id",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"audience": "other.example"}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"service": "https://other.example/csc/v2"}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-requires-request-id-field",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": null, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:not-base64", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-unauthenticated-caller",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"authenticated": false}, "expect": {"httpStatus": 401, "body": {"error": "invalid_token"}}},
+        {"action": "poll", "requestID": "sc1:EBESExQVFhcYGRobHB0eHw", "callerPatch": {"authenticated": false}, "expect": {"httpStatus": 401, "body": {"error": "invalid_token"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-client-id-poll-unnegotiated",
+      "wireFixture": true,
+      "capabilityPatch": {"profile": "ordinary-csc"},
+      "steps": [
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
       "id": "unknown-client-id-is-not-proof-of-nonexecution",
       "steps": [{"action": "lookup", "expect": "unknown"}],
       "invocations": 0
+    },
+    {
+      "id": "profile-poll-same-client-other-owner-is-opaque",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"owner": "owner-02"}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "lookup", "callerPatch": {"owner": "owner-02"}, "expect": "unknown"},
+        {"action": "submit", "callerPatch": {"owner": "owner-02"}, "expect": "unauthorized"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-poll-rejects-user-id-in-user-specific-mode",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "userID": "owner-01", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "userID": null, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-poll-rejects-non-user-specific-mode",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "callerPatch": {"authorizationMode": "service"}, "expect": "unauthorized"},
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"authorizationMode": "service"}, "userID": "owner-01", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-poll-rejects-non-string-client-data-before-result",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": null, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": 7, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": {}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "clientData": "unrelated-metadata", "expect": {"httpStatus": 200, "body": {"signatures": ["AQIDBA=="]}}, "expectSignatureHex": "01020304"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "profile-poll-completed-signature-bytes-are-immutable",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed"},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed:synthetic-signature-01"},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020305", "authenticated": true, "expect": "immutable-result"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"signatures": ["AQIDBA=="]}}, "expectSignatureHex": "01020304"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "profile-poll-requires-authenticated-owner",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "callerPatch": {"owner": null}, "expect": "unauthorized"},
+        {"action": "submit", "expect": "reserved"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "callerPatch": {"owner": null}, "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 202, "body": null}}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "profile-poll-missing-completion-bytes-stays-unresolved",
+      "wireFixture": true,
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "outcome-mismatch"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"outcomeState": "unresolved"}}},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed"},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 200, "body": {"signatures": ["AQIDBA=="]}}, "expectSignatureHex": "01020304"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "profile-poll-expiry-erases-all-result-material",
+      "wireFixture": true,
+      "authorizationPatch": {"expiresAt": 120000},
+      "steps": [
+        {"action": "submit", "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "authenticated": true, "expect": "completed"},
+        {"action": "inspectDurable", "expect": {"status": "completed", "result": "synthetic-signature-01", "signatureBytesHex": "01020304", "resultAvailableUntil": 60001, "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "grantUses": 1}},
+        {"action": "advance", "now": 60002, "expect": "time-advanced"},
+        {"action": "inspectDurable", "expect": {"status": "expired", "result": null, "signatureBytesHex": null, "resultAvailableUntil": null, "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "grantUses": 1}},
+        {"action": "restart", "expect": "unknown"},
+        {"action": "inspectDurable", "expect": {"status": "expired", "result": null, "signatureBytesHex": null, "resultAvailableUntil": null, "clientData": "sc1:AAECAwQFBgcICQoLDA0ODw", "grantUses": 1}},
+        {"action": "poll", "requestID": "sc1:AAECAwQFBgcICQoLDA0ODw", "expect": {"httpStatus": 400, "body": {"error": "invalid_request"}}},
+        {"action": "submit", "expect": "unknown"}
+      ],
+      "invocations": 1
     }
   ]
 }
