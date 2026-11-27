@@ -42,6 +42,15 @@
     "keyIdentity": "key-version-01"
   },
   "baseCredentialStatus": "enabled",
+  "baseSelectedKeyEvidence": {
+    "verified": true,
+    "credentialID": "credential-01",
+    "providerIdentity": "provider-instance-01",
+    "keyIdentity": "key-version-01",
+    "keyAlgos": ["1.2.840.113549.1.1.1"],
+    "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.1",
+    "certifiedSpkiParamsBase64": "BQA="
+  },
   "baseServiceInfo": {
     "methods": ["signatures/signHash", "signatures/signPolling"],
     "asynchronousOperationMode": true,
@@ -371,6 +380,116 @@
         {"action": "dispatch", "expect": "unresolved"}
       ],
       "invocations": 1
+    },
+    {
+      "id": "selected-pss-sha256-key-rejects-sha384-signature",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.2", "hashes": ["WeF0h3dEjGnea4ANejO7+5/xtGPkQ1TDVTvNucZm+pASWjx5+QOXvfX2oT3oKGhP"]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.2", "hashes": ["WeF0h3dEjGnea4ANejO7+5/xtGPkQ1TDVTvNucZm+pASWjx5+QOXvfX2oT3oKGhP"]}, "expect": "key-incompatible"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "selected-pss-sha256-key-allows-matching-signature",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "selected-pss-key-rejects-signature-salt-below-minimum",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEQ"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEQ"},
+      "steps": [{"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEQ"}, "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "selected-pss-key-allows-signature-salt-above-minimum",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEw"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEw"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEw"}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "selected-key-pss-restriction-changes-before-dispatch",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"}, "expect": "reserved"},
+        {"action": "changeSelectedKeyEvidence", "selectedKeyPatch": {"certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw"}, "expect": "selected-key-evidence-changed"},
+        {"action": "dispatch", "expect": "key-incompatible"},
+        {"action": "lookup", "expect": "key-incompatible"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "selected-key-change-after-dispatch-does-not-reinvoke",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "changeSelectedKeyEvidence", "selectedKeyPatch": {"certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw"}, "expect": "selected-key-evidence-changed"},
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"}, "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "unverified-selected-key-evidence-cannot-admit",
+      "selectedKeyPatch": {"verified": false},
+      "steps": [{"action": "submit", "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "pss-restricted-selected-key-rejects-generic-rsa-signature",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "steps": [{"action": "submit", "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "pss-key-with-absent-certified-parameters-allows-sha384",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": null},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.2", "hashes": ["WeF0h3dEjGnea4ANejO7+5/xtGPkQ1TDVTvNucZm+pASWjx5+QOXvfX2oT3oKGhP"]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.2", "hashes": ["WeF0h3dEjGnea4ANejO7+5/xtGPkQ1TDVTvNucZm+pASWjx5+QOXvfX2oT3oKGhP"]}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "selected-pss-key-rejects-mgf1-hash-mismatch",
+      "selectedKeyPatch": {"keyAlgos": ["1.2.840.113549.1.1.10"], "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.10", "certifiedSpkiParamsBase64": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEg"},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"},
+      "steps": [{"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"}, "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "selected-key-evidence-must-match-resolved-identity",
+      "selectedKeyPatch": {"keyIdentity": "key-version-02"},
+      "steps": [{"action": "submit", "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "selected-key-evidence-must-match-credential",
+      "selectedKeyPatch": {"credentialID": "credential-02"},
+      "steps": [{"action": "submit", "expect": "key-incompatible"}],
+      "invocations": 0
     },
     {
       "id": "real-pss-sha512-parameters-match-digest",
