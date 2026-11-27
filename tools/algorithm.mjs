@@ -120,7 +120,7 @@ export function supportedSigningTuple(candidate) {
     } catch {
       return false;
     }
-    if (candidate.hashAlgorithmOID != null && candidate.hashAlgorithmOID !== hashOid)
+    if (Object.hasOwn(candidate, 'hashAlgorithmOID') && candidate.hashAlgorithmOID !== hashOid)
       return false;
   } else {
     return false;

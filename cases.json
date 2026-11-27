@@ -354,6 +354,15 @@
       "invocations": 1
     },
     {
+      "id": "pss-present-null-hash-oid-is-not-omission",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg", "hashAlgorithmOID": null},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgEFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgEFAKIDAgEg", "hashAlgorithmOID": null}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
       "id": "real-pss-sha384-parameters-match-digest",
       "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw"]}},
       "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgIFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgIFAKIDAgEw", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.2", "hashes": ["WeF0h3dEjGnea4ANejO7+5/xtGPkQ1TDVTvNucZm+pASWjx5+QOXvfX2oT3oKGhP"]},
