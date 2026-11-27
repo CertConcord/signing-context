@@ -37,6 +37,10 @@ function validClientId(value) {
 function runCase(corpus, vector) {
   const request = copy(corpus.baseRequest);
   const authorization = {...copy(corpus.baseAuthorization), ...copy(vector.authorizationPatch ?? {})};
+  if (vector.omitValidityPeriod === true) {
+    delete request.validity_period;
+    delete authorization.validity_period;
+  }
   const baseCaller = copy(corpus.baseAuthenticatedCaller);
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
   const capability = {...corpus.baseCapability, ...vector.capabilityPatch};
@@ -64,6 +68,10 @@ function runCase(corpus, vector) {
         prior.request.clientData === candidate.clientData) {
       return sameBoundFields(prior.request, candidate) ? statusOf(prior) : 'collision';
     }
+    const effectiveValidityPeriod = candidate.validity_period === undefined
+      ? capability.defaultValidityPeriod : candidate.validity_period;
+    if (!Number.isSafeInteger(effectiveValidityPeriod) ||
+        effectiveValidityPeriod <= 0) return 'unsupported';
     if (durable.revoked || now > authorization.expiresAt) return 'unauthorized';
     if (!sameBoundFields(candidate, authorization) ||
         !isDeepStrictEqual(resolvedSelection, corpus.baseAuthorizationSelection)) return 'unauthorized';
@@ -73,6 +81,7 @@ function runCase(corpus, vector) {
     durable.grantUse.push({caller: copy(caller), authorizationRef: candidate.authorizationRef});
     durable.record = {request: copy(candidate), caller: copy(caller),
       selection: copy(resolvedSelection),
+      effectiveValidityPeriod,
       status: 'reserved', result: null};
     return 'reserved';
   }
@@ -110,7 +119,7 @@ function runCase(corpus, vector) {
           ? statusOf(record) : 'immutable-result';
         record.result = step.result;
         record.status = 'completed';
-        record.resultAvailableUntil = now + record.request.validity_period;
+        record.resultAvailableUntil = now + record.effectiveValidityPeriod;
         return 'completed';
       case 'lookup': {
         const caller = callerFor(step);
@@ -123,6 +132,9 @@ function runCase(corpus, vector) {
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
+      case 'changeDefaultValidityPeriod':
+        capability.defaultValidityPeriod = step.value;
+        return 'policy-changed';
       case 'cancel': {
         const caller = callerFor(step);
         if (caller.authenticated !== true) return 'access-denied';
