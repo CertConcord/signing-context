@@ -39,6 +39,10 @@ function validClientId(value) {
 }
 
 function runCase(corpus, vector) {
+  // This fixture flag separates negotiated wire polling from legacy internal status tests.
+  const wireFixture = vector.wireFixture === true;
+  assert.equal(wireFixture, vector.steps.some(step => step.action === 'poll'),
+    `${vector.id} wire fixture boundary`);
   const request = copy(corpus.baseRequest);
   const authorization = {...copy(corpus.baseAuthorization), ...copy(vector.authorizationPatch ?? {})};
   if (vector.omitValidityPeriod === true) {
@@ -125,6 +129,7 @@ function runCase(corpus, vector) {
 
   // Only the negotiated sc1 client-ID form is modeled; ordinary server-ID polling is unchanged.
   function profileClientPoll(step) {
+    assert(wireFixture, 'poll is only modeled in a wire fixture');
     const caller = callerFor(step);
     if (caller.authenticated !== true)
       return {httpStatus: 401, body: {error: 'invalid_token'}};
@@ -192,6 +197,7 @@ function runCase(corpus, vector) {
         if (Object.hasOwn(step, 'signatureBytesHex') &&
             (typeof step.signatureBytesHex !== 'string' ||
              !/^(?:[a-f0-9]{2})+$/.test(step.signatureBytesHex))) return 'outcome-mismatch';
+        if (wireFixture && !Object.hasOwn(step, 'signatureBytesHex')) return 'outcome-mismatch';
         if (record.status === 'completed') return record.result === step.result &&
           record.signatureBytesHex === (step.signatureBytesHex ?? null)
           ? statusOf(record) : 'immutable-result';
@@ -209,6 +215,12 @@ function runCase(corpus, vector) {
         return statusOf(record);
       }
       case 'poll': return profileClientPoll(step);
+      case 'inspectDurable':
+        return {status: record?.status, result: record?.result,
+          signatureBytesHex: record?.signatureBytesHex,
+          resultAvailableUntil: record?.resultAvailableUntil,
+          clientData: record?.request.clientData,
+          grantUses: durable.grantUse.length};
       case 'remap':
         resolvedSelection = {...resolvedSelection, ...copy(step.selectionPatch)};
         return 'selection-changed';
@@ -239,6 +251,8 @@ function runCase(corpus, vector) {
         if (record?.status === 'completed' && now > record.resultAvailableUntil) {
           record.status = 'expired';
           record.result = null;
+          record.signatureBytesHex = null;
+          record.resultAvailableUntil = null;
         }
         return 'time-advanced';
       default: throw new Error(`Unknown action ${step.action}`);
@@ -247,7 +261,7 @@ function runCase(corpus, vector) {
 
   for (const [index, step] of vector.steps.entries()) {
     const actual = stepResult(step);
-    if (step.action === 'poll') {
+    if (step.action === 'poll' || step.action === 'inspectDurable') {
       assert.deepEqual(actual, step.expect, `${vector.id} step ${index + 1}`);
       if (step.expectSignatureHex !== undefined) {
         const encoded = actual.body?.signatures?.[0];
