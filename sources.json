@@ -1,5 +1,5 @@
 {
-  "reviewDate": "2026-11-24",
+  "reviewDate": "2026-11-26",
   "sources": [
     {
       "id": "rawSigningV5",
@@ -24,6 +24,24 @@
       "url": "https://cloudsignatureconsortium.org/wp-content/uploads/2025/11/csc-api.pdf",
       "sha256": "339cb9905a9ae3779e4a99ff2dc57a3f5243528dfb3578ee5c91745929fa76c1",
       "bytes": 4143407
+    },
+    {
+      "id": "cscDataModel100",
+      "url": "https://cloudsignatureconsortium.org/wp-content/uploads/2025/10/csc-dm.pdf",
+      "sha256": "15d19fbe2d6078ce5f3247d52a3c43d28f801115091940f9cebe860858e956bb",
+      "bytes": 623417
+    },
+    {
+      "id": "rfc8017",
+      "url": "https://www.rfc-editor.org/rfc/rfc8017.txt",
+      "sha256": "1e72dc473d18df3fc5598cdc12795a9f18f36f1aef15abc23a55eb0d58151d11",
+      "bytes": 154696
+    },
+    {
+      "id": "rfc4055",
+      "url": "https://www.rfc-editor.org/rfc/rfc4055.txt",
+      "sha256": "b8a1ef3fb135c32aed4eee121264f3ec83a46def746c8fe68e05bd1b60324e9a",
+      "bytes": 57479
     }
   ]
 }
