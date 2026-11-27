@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
+import {canonicalBytes, supportedSigningTuple} from './algorithm.mjs';
 
 const boundFields = [
   'service', 'audience', 'credentialID', 'authorizationRef', 'inputKind',
@@ -15,15 +16,15 @@ const statusOf = record => {
   if (record.status === 'completed') return `completed:${record.result}`;
   return record.status === 'expired' ? 'unknown' : record.status;
 };
-const validDigest = value => typeof value === 'string' &&
-  Buffer.from(value, 'base64').length === 32 &&
-  Buffer.from(value, 'base64').toString('base64') === value;
 const sameBoundFields = (left, right) => boundFields.every(
   field => field === 'hashes'
     ? Array.isArray(left.hashes) && Array.isArray(right.hashes) &&
       left.hashes.length === right.hashes.length &&
-      left.hashes.every((value, i) => validDigest(value) && validDigest(right.hashes[i]) &&
-        Buffer.from(value, 'base64').equals(Buffer.from(right.hashes[i], 'base64')))
+      left.hashes.every((value, i) => {
+        const a = canonicalBytes(value);
+        const b = canonicalBytes(right.hashes[i]);
+        return a !== null && b !== null && a.equals(b);
+      })
     : isDeepStrictEqual(left[field], right[field])
 );
 
@@ -40,6 +41,10 @@ function runCase(corpus, vector) {
   if (vector.omitValidityPeriod === true) {
     delete request.validity_period;
     delete authorization.validity_period;
+  }
+  if (vector.omitHashAlgorithmOID === true) {
+    delete request.hashAlgorithmOID;
+    delete authorization.hashAlgorithmOID;
   }
   const baseCaller = copy(corpus.baseAuthenticatedCaller);
   let resolvedSelection = {...copy(corpus.baseSelection), ...copy(vector.selectionPatch ?? {})};
@@ -80,13 +85,14 @@ function runCase(corpus, vector) {
         capability.clientLookup !== true) return 'unsupported';
     if (candidate.inputKind !== 'digest' || candidate.operationMode !== 'A' ||
         !Array.isArray(candidate.hashes) || candidate.hashes.length !== 1 ||
-        !validDigest(candidate.hashes[0]) || !validClientId(candidate.clientData)) return 'unsupported';
+        !canonicalBytes(candidate.hashes[0]) || !validClientId(candidate.clientData)) return 'unsupported';
     if (!sameScope(candidate, caller)) return 'unauthorized';
     const prior = durable.record;
     if (prior && sameScope(prior.caller, caller) &&
         prior.request.clientData === candidate.clientData) {
       return sameBoundFields(prior.request, candidate) ? statusOf(prior) : 'collision';
     }
+    if (!supportedSigningTuple(candidate)) return 'unsupported';
     if (!serviceSupports(candidate)) return 'unsupported';
     if (credentialStatus !== 'enabled') return 'key-unavailable';
     const effectiveValidityPeriod = candidate.validity_period === undefined
@@ -115,6 +121,7 @@ function runCase(corpus, vector) {
         if (!record || record.status !== 'reserved') return 'invalid-transition';
         if (durable.revoked) return (record.status = 'authorization-revoked');
         if (now > authorization.expiresAt) return (record.status = 'authorization-expired');
+        if (!supportedSigningTuple(record.request)) return (record.status = 'service-unavailable');
         if (!serviceSupports(record.request)) return (record.status = 'service-unavailable');
         if (credentialStatus !== 'enabled') return (record.status = 'key-unavailable');
         {
@@ -122,6 +129,7 @@ function runCase(corpus, vector) {
           const selected = {...resolvedSelection, ...copy(step.effectiveSelectionPatch ?? {})};
           if (effective.clientData !== record.request.clientData ||
               !sameBoundFields(effective, record.request) ||
+              !supportedSigningTuple(effective) ||
               !isDeepStrictEqual(selected, record.selection)) return (record.status = 'boundary-mismatch');
         }
         record.status = 'unresolved';
