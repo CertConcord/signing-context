@@ -47,6 +47,7 @@
     "credentialID": "credential-01",
     "providerIdentity": "provider-instance-01",
     "keyIdentity": "key-version-01",
+    "keyLenBits": 2048,
     "keyAlgos": ["1.2.840.113549.1.1.1"],
     "certifiedSpkiAlgorithm": "1.2.840.113549.1.1.1",
     "certifiedSpkiParamsBase64": "BQA="
@@ -498,6 +499,76 @@
       "steps": [
         {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "reserved"},
         {"action": "dispatch", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "pss-sha512-salt64-cannot-fit-selected-1024-bit-key",
+      "selectedKeyPatch": {"keyLenBits": 1024},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "key-incompatible"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "pss-sha512-salt64-fails-at-1033-bit-boundary",
+      "selectedKeyPatch": {"keyLenBits": 1033},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [{"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "pss-sha512-salt64-fits-at-1034-bit-boundary",
+      "selectedKeyPatch": {"keyLenBits": 1034},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "unknown-selected-key-length-cannot-admit-pss",
+      "selectedKeyPatch": {"keyLenBits": null},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [{"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "unsafe-selected-key-length-cannot-admit-pss",
+      "selectedKeyPatch": {"keyLenBits": 9007199254740992},
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [{"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "key-incompatible"}],
+      "invocations": 0
+    },
+    {
+      "id": "selected-key-length-evidence-lost-before-pss-dispatch",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "reserved"},
+        {"action": "changeSelectedKeyEvidence", "selectedKeyPatch": {"keyLenBits": null}, "expect": "selected-key-evidence-changed"},
+        {"action": "dispatch", "expect": "key-incompatible"},
+        {"action": "lookup", "expect": "key-incompatible"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "selected-key-length-evidence-lost-after-pss-dispatch",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "changeSelectedKeyEvidence", "selectedKeyPatch": {"keyLenBits": null}, "expect": "selected-key-evidence-changed"},
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "MDSgDzANBglghkgBZQMEAgMFAKEcMBoGCSqGSIb3DQEBCDANBglghkgBZQMEAgMFAKIDAgFA", "hashAlgorithmOID": "2.16.840.1.101.3.4.2.3", "hashes": ["m3HSJL1i83hdltRq0+o9czGb+8KJDKra4t/3JRlnPKcjI8PZm6XBHXx6zG4UuMXaDEZjR1wuXDre9G9zvN7AQw=="]}, "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"}
       ],
       "invocations": 1
     },
