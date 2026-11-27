@@ -266,6 +266,72 @@
       "invocations": 0
     },
     {
+      "id": "unadvertised-signature-parameters-cannot-admit",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:other-pss-params"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "advertised-signature-parameters-preserve-same-request-recovery",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:pss-sha256"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "complete", "result": "synthetic-signature-01", "authenticated": true, "expect": "completed"},
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "completed:synthetic-signature-01"}
+      ],
+      "invocations": 1
+    },
+    {
+      "id": "missing-signature-parameter-advertisement-cannot-admit",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "unsupported"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "signature-parameter-support-lost-before-dispatch-blocks-invocation",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:pss-sha256"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "reserved"},
+        {"action": "changeServiceInfo", "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:other-pss-params"]}}, "expect": "service-info-changed"},
+        {"action": "dispatch", "expect": "service-unavailable"},
+        {"action": "lookup", "expect": "service-unavailable"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "signature-parameters-changed-at-key-boundary-are-rejected",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:pss-sha256", "fixture:other-pss-params"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "reserved"},
+        {"action": "dispatch", "effectiveRequestPatch": {"signAlgoParams": "fixture:other-pss-params"}, "expect": "boundary-mismatch"},
+        {"action": "lookup", "expect": "boundary-mismatch"}
+      ],
+      "invocations": 0
+    },
+    {
+      "id": "signature-parameter-support-lost-after-dispatch-does-not-reinvoke",
+      "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:pss-sha256"]}},
+      "authorizationPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"},
+      "steps": [
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "reserved"},
+        {"action": "dispatch", "expect": "unresolved"},
+        {"action": "changeServiceInfo", "serviceInfoPatch": {"signAlgorithms": {"algos": ["1.2.840.113549.1.1.10"], "algoParams": ["fixture:other-pss-params"]}}, "expect": "service-info-changed"},
+        {"action": "submit", "requestPatch": {"signAlgo": "1.2.840.113549.1.1.10", "signAlgoParams": "fixture:pss-sha256"}, "expect": "unresolved"},
+        {"action": "lookup", "expect": "unresolved"}
+      ],
+      "invocations": 1
+    },
+    {
       "id": "async-capability-lost-before-dispatch-blocks-invocation",
       "steps": [
         {"action": "submit", "expect": "reserved"},

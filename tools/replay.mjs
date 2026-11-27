@@ -57,12 +57,18 @@ function runCase(corpus, vector) {
   }
 
   function serviceSupports(candidate) {
+    const params = candidate.signAlgoParams;
+    const paramsSupported = params == null ||
+      (typeof params === 'string' && params.length > 0 &&
+        Array.isArray(serviceInfo.signAlgorithms?.algoParams) &&
+        serviceInfo.signAlgorithms.algoParams.includes(params));
     return Array.isArray(serviceInfo.methods) &&
       serviceInfo.methods.includes('signatures/signHash') &&
       serviceInfo.methods.includes('signatures/signPolling') &&
       serviceInfo.asynchronousOperationMode === true &&
       Array.isArray(serviceInfo.signAlgorithms?.algos) &&
-      serviceInfo.signAlgorithms.algos.includes(candidate.signAlgo);
+      serviceInfo.signAlgorithms.algos.includes(candidate.signAlgo) &&
+      paramsSupported;
   }
 
   function submit(candidate, caller) {
